@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <link rel="stylesheet" href="/public/css/style.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+</head>
+
+<body>
+    <!-- <form>
+        <input type="email" id="email">
+        <br><br>
+        <input type="password" id="password">
+        <br><br>
+        <button onclick="login()">Send</button>
+    </form> -->
+
+
+    <div class="header">
+        <h1 class="header-title">Notes</h1>
+        <div class="adding-notes">
+            <div id="profile">
+                Name:
+            </div>
+            <div class="add-button">
+                <button id="add-button" class="btn btn-light btn-sm">Add Note</button>
+            </div>
+        </div>
+
+    </div>
+    <div class="modal-add">
+        <div class="modal-content">
+            <span class="close-add">&times;</span>
+            <label>Title</label>
+            <input type="text" name="title" id="title">
+            <br>
+            <label>Text</label>
+            <input type="text" name="text" id="text">
+            <br>
+            <button id="submit-btn" class="btn btn-success" onclick="addNote()">Submit</button>
+        </div>
+    </div>
+    <div class="modal-edit">
+        <span class="close-edit">&times;</span>
+        <h2>Test Header</h2>
+        <label>Title</label>
+        <input type="text" name="title" id="title">
+        <br>
+        <label>Text</label>
+        <input type="text" name="text" id="text">
+        <br>
+        <button id="add-btn" class="btn btn-success" onclick="addNote()">Submit</button>
+    </div>
+    <div id='notes' class="container">
+        <!-- <div class="card">
+            <h2 class="card-title">Weekly menu</h2>
+            <p class="card-text">Meat and vegetables</p>
+            <p class="card-data">22.10.2023</p>
+        </div>
+        <div class="card">
+            <h2 class="card-title">Sleepy day</h2>
+            <p class="card-text">I have slept for 12 hours</p>
+            <p class="card-data">25.10.2023</p>
+        </div> -->
+    </div>
+    <div class="weather">
+        <p id="weather-text"></p>
+    </div>
+
+    <script>
+        $('#add-button').click(function () {
+            $('.modal-add').css("display", "block")
+        })
+        $('.close-add').click(function () {
+            $('.modal-add').css("display", "none")
+        })
+        $('#edit-button').click(function () {
+            $('.modal-edit').css("display", "block")
+        })
+        $('.close-edit').click(function () {
+            $('.modal-edit').css("display", "none")
+        })
+
+        function addNote() {
+            let title = $('#title').val()
+            let text = $("#text").val()
+
+            $.ajax({
+                url: '/post/add',
+                method: 'post',
+                data: { title: title, text: text },
+                success: function (r) {
+                    $('#notes').html('')
+                    shownotes()
+                }, error: function (e) {
+                    console.log(e)
+                }
+            })
+        }
+        function profile() {
+            $.ajax({
+                url: '/user/get',
+                method: 'get',
+                success: function (r) {
+                    $('#profile').append(r.nickname)
+                }
+            })
+        }
+        function showWeather() {
+            $.ajax({
+                url: '/weather',
+                method: 'get',
+                success: function (r) {
+                    console.log(JSON.parse(r))
+                    let data = JSON.parse(r)
+                    let text = document.getElementById('weather-text')
+                    text.innerHTML = data.main.temp + ' C'
+                }
+            })
+        }
+        function shownotes() {
+            $.ajax({
+                url: '/post/notes',
+                method: 'get',
+                success: function (r) {
+                    r.forEach(note => {
+                        var cardTitle = note.title
+                        var cardText = note.text
+                        var cardData = note.date
+                        var cardId = note.id
+                        let list = createToDoListIteem(cardText, false)
+                        let title = createAppTitle(cardTitle)
+                        let div = document.createElement('div')
+                        div.setAttribute('id', 'card')
+                        div.append(title)
+                        div.append(list.item)
+                        $('#notes').append(div)
+                        $('#notes').append("<p>Date: " + cardData + "</p>")
+
+                        list.deleteButton.addEventListener('click', async function () {
+                            if (confirm("Are you sure to delete it?")) {
+                                $.ajax({
+                                    url: '/post/delete',
+                                    method: 'post',
+                                    data: { id: cardId },
+                                    success: function (r) {
+                                        if (JSON.parse(r).r == 1) {
+                                            alert('Deleted Successfully!')
+                                            window.location.href = '/'
+                                        } else {
+                                            alert("error")
+                                        }
+                                    }
+                                })
+                            }
+                        })
+                        list.doneButton.addEventListener('click', async function () {
+                            let modal = list.editFillDiv
+                            let close = list.editSpan
+                            let btn = list.doneButton
+                            list.editHead.innerHTML = cardTitle
+                            let editBtn = list.editButton
+
+
+
+                            btn.onclick = function () {
+                                modal.style.display = "block";
+
+                            }
+                            close.onclick = function () {
+                                modal.style.display = "none";
+                            }
+                            window.onclick = function (event) {
+                                if (event.target == modal) {
+                                    modal.style.display = "none";
+                                }
+                            }
+                            editBtn.onclick = function () {
+                                modal.style.display = "block";
+                                let newText = $('#new-text').val()
+                                console.log(cardId, newText)
+                                $.ajax({
+                                    url: '/post/edit',
+                                    method: 'post',
+                                    data: {
+                                        id: cardId,
+                                        text: newText
+                                    },
+                                    success: function (r) {
+                                        if (JSON.parse(r).r == 1) {
+                                            alert('Edited Successfully!')
+
+                                            // window.location.href = '/'
+                                        } else {
+                                            alert("error")
+                                        }
+                                    }
+                                })
+
+                            }
+
+
+
+
+
+                        })
+                        // Display the content in a specific element with id="displayContent"
+                        // $('#notes').append("<div class='card'><h2>Title: " + cardTitle + "</h2><p>Text: " + cardText + "</p><p>Date: " + cardData + "</p></div>");
+
+                    })
+                }, error: function (e) {
+                    console.log(e)
+                }
+            })
+        }
+
+        function createAppTitle(title) {
+            let appTitle = document.createElement('h2')
+            appTitle.innerHTML = title
+            return appTitle
+        }
+
+        function createToDoListIteem(name, status) {
+            let item = document.createElement('li')
+            let buttonGroup = document.createElement('div')
+            let doneButton = document.createElement('button')
+            let deleteButton = document.createElement('button')
+
+            let editFillDiv = document.createElement('div')
+            let editFill = document.createElement('div')
+            let editSpan = document.createElement('span')
+            editSpan.innerHTML = '&times'
+            let editButton = document.createElement('button')
+            editButton.classList.add('btn', 'btn-success', 'edit-btn')
+            editButton.textContent = "Edit"
+            let editHead = document.createElement('h1')
+            let editText = document.createElement('input')
+            editText.id = 'new-text'
+            let editlabel = document.createElement('label')
+            editlabel.textContent = 'Edit text:'
+
+            editFillDiv.classList.add("modal")
+            editFill.classList.add("modal-content")
+            editSpan.classList.add("close")
+            editText.classList.add("modal-text")
+            editFill.append(editSpan, editHead, editlabel, editText, editButton)
+            editFillDiv.append(editFill)
+
+            item.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center')
+            if (status == 'true') {
+                item.classList.add("list-group-item-success")
+            }
+            item.textContent = name
+
+            buttonGroup.classList.add('btn-group', 'btn-group-sm')
+            doneButton.classList.add('btn', 'btn-success')
+            doneButton.textContent = "Edit"
+            deleteButton.classList.add('btn', 'btn-danger')
+            deleteButton.textContent = "Delete"
+            buttonGroup.append(doneButton)
+            buttonGroup.append(deleteButton)
+            buttonGroup.append(editFillDiv)
+            item.append(buttonGroup)
+
+            return {
+                item,
+                doneButton,
+                deleteButton,
+                editFillDiv,
+                editText,
+                editSpan,
+                editHead,
+                editButton
+            }
+
+        }
+        $('#submit-btn').click(function () {
+            $('.modal-edit').css("display", "none")
+        })
+        shownotes()
+        profile()
+        showWeather()
+        $('#myModal').on('shown.bs.modal', function () {
+            $('#myInput').trigger('focus')
+        })
+    </script>
+</body>
+
+</html>
